@@ -1,26 +1,41 @@
-import React from 'react';
+import React from "react";
 
-import BlogHero from '@/components/BlogHero';
+import BlogHero from "@/components/BlogHero";
+import { compileMDX } from "next-mdx-remote/rsc";
+import styles from "./postSlug.module.css";
+import CodeSnippet from "@/components/CodeSnippet";
+import { getBlogPostList, loadBlogPost } from "@/helpers/file-helpers";
 
-import styles from './postSlug.module.css';
+export async function generateStaticParams() {
+	const blogpostList = await getBlogPostList();
+	const slug = blogpostList.map((blogpost) => {
+		return {
+			slug: blogpost.slug,
+		};
+	});
+	return slug;
+}
 
-function BlogPost() {
-  return (
-    <article className={styles.wrapper}>
-      <BlogHero
-        title="Example post!"
-        publishedOn={new Date()}
-      />
-      <div className={styles.page}>
-        <p>This is where the blog post will go!</p>
-        <p>
-          You will need to use <em>MDX</em> to render all of
-          the elements created from the blog post in this
-          spot.
-        </p>
-      </div>
-    </article>
-  );
+async function BlogPost({ params }) {
+	const { postSlug } = params;
+	const blogPost = await loadBlogPost(postSlug);
+	const { frontmatter } = blogPost;
+	const { content } = await compileMDX({
+		source: blogPost.content,
+		components: {
+			pre: CodeSnippet,
+		},
+	});
+
+	return (
+		<article className={styles.wrapper}>
+			<BlogHero
+				title={frontmatter.title}
+				publishedOn={frontmatter.publishedOn}
+			/>
+			<div className={styles.page}>{content}</div>
+		</article>
+	);
 }
 
 export default BlogPost;
